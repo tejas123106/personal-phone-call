@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Private Chat & Call</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+    <link rel="apple-touch-icon" href="icon.svg">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
+    <!-- PeerJS -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen">
+        <div class="login-box">
+            <div class="icon">💬</div>
+            <h2>Welcome</h2>
+            <p>Login to your account.</p>
+            <div class="input-group">
+                <input type="email" id="email-input" placeholder="Email Address" autocomplete="off">
+            </div>
+            <div class="input-group">
+                <input type="text" id="username-input" placeholder="Username (e.g. user@123)" autocomplete="off">
+                <small class="hint">Must include letters, numbers, and a special character.</small>
+            </div>
+            <div class="input-group">
+                <input type="password" id="password-input" placeholder="Password" autocomplete="off">
+            </div>
+            <button id="login-btn">Login / Register</button>
+            <p id="login-error" class="error hidden"></p>
+            <button id="install-btn" class="primary-btn hidden" style="margin-top: 15px; background: #28a745;">📥 Install App to Home Screen</button>
+            <button id="clear-data-btn" class="text-btn text-danger" style="margin-top: 15px; width: 100%;">Clear All Accounts & Data</button>
+        </div>
+    </div>
+
+    <!-- Main App Screen -->
+    <div id="app-screen" class="screen hidden">
+        <div class="app-container" id="app-container">
+            <!-- Sidebar for Friends List -->
+            <div class="sidebar" id="sidebar">
+                <div class="profile-box">
+                    <div class="profile-info">
+                        <div class="avatar" id="my-avatar" title="Click to change profile photo">
+                            <span id="my-avatar-text">T</span>
+                            <div class="avatar-overlay">📷</div>
+                        </div>
+                        <input type="file" id="profile-photo-input" class="hidden" accept="image/*">
+                        <div class="details">
+                            <h3><span id="my-username" class="highlight"></span></h3>
+                            <button id="logout-btn" class="text-btn">Logout</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="add-friend-box">
+                    <input type="text" id="add-friend-input" placeholder="Add friend by username..." autocomplete="off">
+                    <button id="add-friend-btn">Add</button>
+                </div>
+
+                <div class="friends-list-container">
+                    <h4>Messages</h4>
+                    <ul id="friends-list" class="friends-list">
+                        <!-- Friends will appear here -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Main Area for Chat and Video -->
+            <div class="main-content" id="main-content">
+                
+                <div id="no-chat-selected" class="no-chat-selected">
+                    <div class="icon">📨</div>
+                    <h2>Your Messages</h2>
+                    <p>Select a friend from the sidebar to start chatting.</p>
+                </div>
+
+                <div id="active-chat" class="active-chat hidden">
+                    <!-- Chat Header -->
+                    <div class="chat-header">
+                        <button id="back-btn" class="icon-btn mobile-only">⬅️</button>
+                        <div class="active-friend-info">
+                            <div class="avatar" id="active-friend-avatar">
+                                <span id="active-friend-avatar-text">F</span>
+                            </div>
+                            <div>
+                                <h3 id="active-friend-name">Friend</h3>
+                                <span id="active-friend-status" class="status-offline">Offline</span>
+                            </div>
+                        </div>
+                        <div class="call-actions">
+                            <button id="voice-call-btn" class="icon-btn" title="Voice Call">📞</button>
+                            <button id="video-call-btn" class="icon-btn" title="Video Call">📹</button>
+                            <button id="delete-friend-btn" class="icon-btn delete-btn" title="Delete Friend">🗑️</button>
+                        </div>
+                    </div>
+
+                    <!-- Video Section -->
+                    <div class="video-container hidden" id="video-container">
+                        <div class="video-wrapper">
+                            <video id="remote-video" autoplay playsinline></video>
+                        </div>
+                        <div class="video-wrapper small">
+                            <video id="local-video" autoplay playsinline muted></video>
+                        </div>
+                        <div class="call-overlay">
+                            <button id="end-call-btn" class="danger-btn shadow">❌ End Call</button>
+                        </div>
+                    </div>
+
+                    <!-- Chat Section -->
+                    <div class="chat-messages" id="chat-messages">
+                        <!-- Messages go here -->
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="file" id="file-input" class="hidden">
+                        <button id="attachment-btn" class="icon-btn" title="Send File">📎</button>
+                        <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+                        <button id="send-btn" class="icon-btn primary-icon">➤</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Call Alert Overlay -->
+    <div id="incoming-call-screen" class="screen hidden incoming-overlay">
+        <div class="incoming-box">
+            <div class="avatar large ringing-anim" id="incoming-avatar">
+                <span id="incoming-avatar-text">F</span>
+            </div>
+            <h2 id="incoming-caller-name">Friend is calling...</h2>
+            <p id="incoming-call-type">Incoming video call</p>
+            <div class="incoming-actions">
+                <button id="reject-call-btn" class="danger-btn circle-btn">❌</button>
+                <button id="accept-call-btn" class="success-btn circle-btn">📞</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio for Ringtone -->
+    <audio id="ringtone" loop>
+        <source src="https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <script src="script.js"></script>
+</body>
+</html>
